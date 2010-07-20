@@ -30,17 +30,19 @@ class JDMReader {
 	public $loaded;
 
 	public function __construct($username, $password) {
-		if($this->_validateUser($username, $password)) {
-			$this->_username = $username;
-			$this->_password = $password;
+		if($this->_connect($username, $password)) {
 			$this->loaded = true;
-			$this->_connect();
 		} else {
+			$this->_username = null;
+			$this->_password = null;
 			$this->loaded = false;
 		}
 	}
 
-	private function _connect() {
+	private function _connect($user, $pass) {
+		$this->_username = $user;
+		$this->_password = $pass;
+		
 		$this->_getToken();
 		return $this->_token != null;
 	}
@@ -88,26 +90,6 @@ class JDMReader {
 		$this->_auth = substr($data, $authIndex, strlen($data));
 	}
 	
-	private function _validateUser($user, $pass) {
-		$requestUrl = "https://www.google.com/accounts/ClientLogin?service=reader&Email=" . urlencode($user) . '&Passwd=' . urlencode($pass);
-
-		$ch = curl_init();
-		curl_setopt($ch, CURLOPT_URL, $requestUrl);
-		curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
-
-		ob_start();
-
-		curl_exec($ch);
-		curl_close($ch);
-		$data = ob_get_contents();
-		ob_end_clean();
-		if(trim($data) == 'Error=BadAuthentication') {
-			return false;
-		} else {
-			return true;
-		}
-	}
-	
 	private function _httpGet($requestUrl, $getArgs) {
 		$url = sprintf('%1$s?%2$s', $requestUrl, $getArgs);
 		$https = strpos($requestUrl, "https://");
@@ -131,31 +113,26 @@ class JDMReader {
 		return $data;       
 	}
 	
-	private function _httpPost($requestUrl, $fields) {
-		$https = strpos($requestUrl, "https://");
+	private function _httpPost($host, $path, $data, $useragent = null) {
+		$buf = "";
 		
-		foreach($fields as $key=>$value) { 
-			$fields_string .= $key.'='.$value.'&'; 
-		}
-		rtrim($fields_string,'&');
-		
-		$ch = curl_init();
-		curl_setopt($ch,CURLOPT_URL,$requestUrl);
-		curl_setopt($ch,CURLOPT_POST,count($fields));
-		curl_setopt($ch,CURLOPT_POSTFIELDS,$fields_string);
-		if($https === true) curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
-//		curl_setopt($ch, CURLOPT_COOKIE, $this->_cookie);
-		curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-type: application/x-www-form-urlencoded', 'Authorization: GoogleLogin auth=' . $this->_auth));
-		
-		try {
-			$result = curl_exec($ch);
-			curl_close($ch);
-			return $result;
-		} catch(Exception $err) {
-			return null;
-		}
-	}
+	    $fp = fsockopen($host, 80) or die("Unable to open socket");
 
+	    fputs($fp, "POST $path HTTP/1.1\r\n");
+	    fputs($fp, "Host: $host\r\n");
+	    fputs($fp, "Content-type: application/x-www-form-urlencoded; charset=UTF-8\r\n");
+		fputs($fp, "Content-Length: " . strlen($data) . "\r\n");		
+		fputs($fp, "Authorization: GoogleLogin auth=$this->_auth\r\n");
+
+		fputs($fp, $data."\r\n\r\n");		
+	    fputs($fp, "Connection: Close\r\n\r\n");
+
+    	while (!feof($fp))
+			$buf .= fgets($fp,128);
+	
+	    fclose($fp);
+	    return $buf;
+	}
 	
 	/* Public Methods */
 	
@@ -201,9 +178,11 @@ class JDMReader {
 	// Add new subscription
 	public function addFeed($feedUrl) {
 		$data = sprintf('quickadd=%1$s&T=%2$s', $feedUrl, $this->_token);
-		$url = 'http://www.google.com/reader/api/0/subscription/quickadd?client=scroll';
-		
-		$response = $this->_httpPost($url, $data);
+		$path = '/reader/api/0/subscription/quickadd?client=scroll';
+		$host = 'www.google.com';
+
+		$response = $this->_httpPost($host, $path, $data);
+
 		if($response == null) return false;
 		return true;
 	}
