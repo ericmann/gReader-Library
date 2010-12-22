@@ -195,5 +195,28 @@ class JDMReader {
 		if($response == null) return false;
 		return true;
 	}
+
+	/**
+	  * Mark this an item as read
+	  *
+	  * This method marks an item as read for a certain user.
+	  *
+	  * @param string $itemId  The item id that can be retrieved from $this->listAll()
+	  *
+	  * @return boolean
+	  */
+	public function markAsRead($itemId) {
+		$data = sprintf(
+			'i=%1$s&T=%2$s&a=%3$s&ac=edit', 
+			$itemId, $this->_token,'user/-/state/com.google/read'
+		);
+
+		$path = '/reader/api/0/edit-tag?client=-';
+		$host = 'www.google.com';
+
+		$response = $this->_httpPost($host, $path, $data);
+		if($response == null) return false;
+		return true;
+	}
 }
 ?>
