@@ -274,7 +274,7 @@ class GReader {
 	  *
 	  * @param array $items An array of items
 	  *
-	  * @return string
+	  * @return string An HTML representation
 	  */
 	public function render( $items ) {
 		$out = "<ul>";
