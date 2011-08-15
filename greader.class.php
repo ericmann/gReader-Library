@@ -142,7 +142,6 @@ class GReader {
 	  * @return boolean
 	  */
 	public function listUnread($limit) {
-		$out = '<ul>';
 		$gUrl = 'http://www.google.com/reader/api/0/stream/contents/user/-/state/com.google/reading-list';
 		$args = sprintf('ot=%1$s&r=n&xt=user/-/state/com.google/read&n=%2$s&ck=%3$s&client=GoogleReaderDashboard', time() - (7*24*3600), $limit, time());
 		
@@ -151,7 +150,7 @@ class GReader {
 		$decoded_data = json_decode($data, true);
 		$feed_items = $decoded_data['items'];
 
-		
+		return $feed_items;
 	}
 
 	/**
