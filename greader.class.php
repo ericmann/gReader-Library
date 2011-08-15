@@ -4,7 +4,7 @@
   * the 'unofficial' Google Reader API.
   */
 
-class JDMReader {
+class GReader {
 	private $_username;
 	private $_password;
 	private $_sid;
@@ -60,6 +60,7 @@ class JDMReader {
 		curl_setopt($ch, CURLOPT_URL, $requestUrl);
 		curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
 
+
 		ob_start();
 
 		curl_exec($ch);
@@ -83,7 +84,7 @@ class JDMReader {
 		curl_setopt($ch, CURLOPT_URL, $url);
 		if($https === true) curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
 //		curl_setopt($ch, CURLOPT_COOKIE, $this->_cookie);
-		curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-type: application/x-www-form-urlencoded', 'Authorization: GoogleLogin auth=' . $this->_auth));
+		curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-type: application/x-www-form-urlencoded; charset=UTF-8', 'Authorization: GoogleLogin auth=' . $this->_auth));
 
 		ob_start();
         
@@ -121,7 +122,11 @@ class JDMReader {
 	
 	/* Public Methods */
 	
-	// List all subscriptions
+	/**
+	  * Lists all suubscriptions
+	  *
+	  * @return json
+	  */
 	public function listAll() {
 		$gUrl = "http://www.google.com/reader/api/0/stream/contents/user/-/state/com.google/reading-list";
 		$args = sprintf('ck=%1$s', time());
@@ -129,7 +134,13 @@ class JDMReader {
 		return $this->_httpGet($gUrl, $args);
 	}
 	
-	// List a particular number of unread posts from the user's reading list
+	/**
+	  * List a number of unread items
+	  *
+	  * @param int $limit The number of items to fetch
+	  *
+	  * @return boolean
+	  */
 	public function listUnread($limit) {
 		$out = '<ul>';
 		$gUrl = 'http://www.google.com/reader/api/0/stream/contents/user/-/state/com.google/reading-list';
@@ -140,27 +151,74 @@ class JDMReader {
 		$decoded_data = json_decode($data, true);
 		$feed_items = $decoded_data['items'];
 
-		foreach($feed_items as $article) {
-			$out .= "<li>";
-			$out .= '<a class="rsswidget grdLink" href="' . $article['alternate'][0]['href'] . '" target="_blank">';
-			$out .= '<span class="grd_title">' . $article['title'] . '</span>';
-			$out .= '</a>';
-			$out .= '<span class="rss-date">' . date('M j, Y', $article['published']) . '</span>';
-			$out .= '<div class="rss-summary">';
-			if(isset($article['summary']['content']))
-				$out .= '<span class="grd_summary">' . $article['summary']['content'] . '</span>';
-			if(isset($article['content']['content'])) {
-				$splitdata = split('</p>', $article['content']['content']);
-				$out .= '<span class="grd_content">' . $splitdata[0] . '[&#x2026;]</p></span>';			
-			}
-			$out .= "</div>";
-			$out .= "</li>";
-		}
-		$out .= "</ul>";
-		return $out;
+		
+	}
+
+	/**
+	  * List a number of starred items
+	  *
+	  * @param int $limit The number of items to fetch
+	  *
+	  * @return boolean
+	  */
+	public function listStarred($limit) {
+		$gUrl = 'http://www.google.com/reader/api/0/stream/contents/user/-/state/com.google/starred';
+		$args = 'n=' . $limit;
+		
+		$data = $this->_httpGet($gUrl, $args);
+		
+		$decoded_data = json_decode($data, true);
+		$feed_items = $decoded_data['items'];
+		
+ 		return $feed_items;
 	}
 	
-	// Add new subscription
+	/**
+	  * List a number of shared items
+	  *
+	  * @param int $limit The number of items to fetch
+	  *
+	  * @return boolean
+	  */
+	public function listShared($limit) {
+		$gUrl = 'http://www.google.com/reader/api/0/stream/contents/user/-/state/com.google/broadcast';
+		$args = 'n=' . $limit;
+		
+		$data = $this->_httpGet($gUrl, $args);
+		
+		$decoded_data = json_decode($data, true);
+		$feed_items = $decoded_data['items'];
+		
+		return $feed_items;
+	}
+
+	/**
+	  * List a number of tagged items
+	  *
+	  * @param string $tag The tag used in items
+	  * @param int $limit The number of items to fetch
+	  *
+	  * @return boolean
+	  */
+	public function listTagged($tag , $limit) {
+		$gUrl = 'http://www.google.com/reader/api/0/stream/contents/user/-/label/' . $tag;
+		$args = 'n=' . $limit;
+		
+		$data = $this->_httpGet($gUrl, $args);
+		
+		$decoded_data = json_decode($data, true);
+		$feed_items = $decoded_data['items'];
+		
+		return $feed_items;
+	}
+	
+	/**
+	  * Add a new feed
+	  *
+	  * @param string $feedUrl
+	  *
+	  * @return boolean
+	  */
 	public function addFeed($feedUrl) {
 		$data = sprintf('quickadd=%1$s&T=%2$s', $feedUrl, $this->_token);
 		$path = '/reader/api/0/subscription/quickadd?client=scroll';
@@ -172,6 +230,14 @@ class JDMReader {
 		return true;
 	}
 	
+	/**
+	  * Add a label to a feed
+	  *
+	  * @param string $label
+	  * @param string $feedUrl
+	  *
+	  * @return boolean
+	  */
 	public function addLabelToFeed($label, $feedUrl) {
 		$data = sprintf('a=user/-/label/%1$s&s=feed/%2$s&ac=edit&T=%3$s', $label, $feedUrl, $this->_token);
 		$url = 'http://www.google.com/reader/api/0/subscription/edit?client=scroll';
@@ -202,6 +268,35 @@ class JDMReader {
 		$response = $this->_httpPost($host, $path, $data);
 		if($response == null) return false;
 		return true;
+	}
+
+	/**
+	  * Render Reader Items into an html unordered list (ul)
+	  *
+	  * @param array $items An array of items
+	  *
+	  * @return string
+	  */
+	public function render( $items ) {
+		$out = "<ul>";
+		foreach($items as $article) {
+			$out .= "<li>";
+			$out .= '<a class="rsswidget grdLink" href="' . $article['alternate'][0]['href'] . '" target="_blank">';
+			$out .= '<span class="grd_title">' . $article['title'] . '</span>';
+			$out .= '</a>';
+			$out .= '<span class="rss-date">' . date('M j, Y', $article['published']) . '</span>';
+			$out .= '<div class="rss-summary">';
+			if(isset($article['summary']['content']))
+				$out .= '<span class="grd_summary">' . $article['summary']['content'] . '</span>';
+			if(isset($article['content']['content'])) {
+				$splitdata = split('</p>', $article['content']['content']);
+				$out .= '<span class="grd_content">' . $splitdata[0] . '[&#x2026;]</p></span>';			
+			}
+			$out .= "</div>";
+			$out .= "</li>";
+		}
+		$out .= "</ul>";
+		return $out;	
 	}
 }
 ?>
