@@ -9,5 +9,5 @@ Changelog:
 - Added extra functions
 - list functions now return an array instead of HTML
 
-Uses OAuth Authentication
+Uses OAuth Authentication / Authorization
 
