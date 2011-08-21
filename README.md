@@ -8,3 +8,6 @@ Changelog:
 - Added UTF-8 support
 - Added extra functions
 - list functions now return an array instead of HTML
+
+Username / Password authentication
+
