@@ -42,15 +42,11 @@ class JDMReader {
 //		curl_setopt($ch, CURLOPT_COOKIE, $this->_cookie);		// This was the old authentication method
 		curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-type: application/x-www-form-urlencoded', 'Authorization: GoogleLogin auth=' . $this->_auth));		// This, apparently, is the new one.
 		curl_setopt($ch, CURLOPT_URL, $url);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
-		ob_start();
+		$this->_token = curl_exec($ch);
 
-		curl_exec($ch);
 		curl_close($ch);
-
-		$this->_token = ob_get_contents();
-
-		ob_end_clean();
 	}
 
 	private function _getSID() {
@@ -59,13 +55,10 @@ class JDMReader {
 		$ch = curl_init();
 		curl_setopt($ch, CURLOPT_URL, $requestUrl);
 		curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
-		ob_start();
-
-		curl_exec($ch);
+		$data = curl_exec($ch);
 		curl_close($ch);
-		$data = ob_get_contents();
-		ob_end_clean();
 
 		$sidIndex = strpos($data, "SID=")+4;
 		$lsidIndex = strpos($data, "LSID=")-5;
@@ -84,14 +77,11 @@ class JDMReader {
 		if($https === true) curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
 //		curl_setopt($ch, CURLOPT_COOKIE, $this->_cookie);
 		curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-type: application/x-www-form-urlencoded', 'Authorization: GoogleLogin auth=' . $this->_auth));
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
-		ob_start();
-        
 		try {
-			curl_exec($ch);
+			$data = curl_exec($ch);
 			curl_close($ch);
-			$data = ob_get_contents();
-			ob_end_clean();
 		} catch(Exception $err) {
 			$data = null;
 		}
