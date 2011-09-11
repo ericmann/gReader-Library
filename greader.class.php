@@ -1,90 +1,41 @@
-<?php
+<?php 
 /**
   * This is a core PHP class for reading data from and parsing information to
   * the 'unofficial' Google Reader API.
   */
 
-class GReader {
-	private $_username;
-	private $_password;
-	private $_sid;
-	private $_auth;
-	private $_token;
-	private $_cookie;
+//Load OAuthSimple OAuth library - https://github.com/alexd3499/oauthsimple (forked from https://github.com/jrconlin/oauthsimple)
+require_once '../OAuthLib/OAuthSimple.php';
+
+class GReader {	
+	private $_signatures;
+	private $_oathObject;
 	
 	public $loaded;
-
-	public function __construct($username, $password) {
-		if($this->_connect($username, $password)) {
-			$this->loaded = true;
-		} else {
-			$this->_username = null;
-			$this->_password = null;
-			$this->loaded = false;
-		}
-	}
-
-	private function _connect($user, $pass) {
-		$this->_username = $user;
-		$this->_password = $pass;
+	
+	public function __construct ( $signatures ) {
+		$this->_signatures = $signatures;
+		$this->_oauthObject = new OAuthSimple();
 		
-		$this->_getToken();
-		return $this->_token != null;
-	}
-    
-	private function _getToken() {
-		$this->_getSID();
-		$this->_cookie = "SID=" . $this->_sid . "; domain=.google.com; path=/";
-
-		$url = "http://www.google.com/reader/api/0/token";
-
-		$ch = curl_init();
-//		curl_setopt($ch, CURLOPT_COOKIE, $this->_cookie);		// This was the old authentication method
-		curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-type: application/x-www-form-urlencoded', 'Authorization: GoogleLogin auth=' . $this->_auth));		// This, apparently, is the new one.
-		curl_setopt($ch, CURLOPT_URL, $url);
-
-		ob_start();
-
-		curl_exec($ch);
-		curl_close($ch);
-
-		$this->_token = ob_get_contents();
-
-		ob_end_clean();
-	}
-
-	private function _getSID() {
-		$requestUrl = "https://www.google.com/accounts/ClientLogin?service=reader&Email=" . urlencode($this->_username) . '&Passwd=' . urlencode($this->_password);
-
-		$ch = curl_init();
-		curl_setopt($ch, CURLOPT_URL, $requestUrl);
-		curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
-
-
-		ob_start();
-
-		curl_exec($ch);
-		curl_close($ch);
-		$data = ob_get_contents();
-		ob_end_clean();
-
-		$sidIndex = strpos($data, "SID=")+4;
-		$lsidIndex = strpos($data, "LSID=")-5;
-		$authIndex = strpos($data, "Auth=")+5;
-
-		$this->_sid = substr($data, $sidIndex, $lsidIndex);
-		$this->_auth = substr($data, $authIndex, strlen($data));
+		$this->loaded = true;
 	}
 	
-	private function _httpGet($requestUrl, $getArgs) {
-		$url = sprintf('%1$s?%2$s', $requestUrl, $getArgs);
-		$https = strpos($requestUrl, "https://");
+	private function _httpGet($url, $parameters) {
+		$this->_oauthObject->reset();
+		$oauth_signatures = $this->_oauthObject->sign(
+			array (
+				'path'      => $url,
+				'parameters'=> $parameters,
+				'signatures'=> $this->_signatures
+			)
+		);
+		$url = $oauth_signatures['signed_url'];
+		$https = strpos($url, "https://");
         
 		$ch = curl_init();
 		curl_setopt($ch, CURLOPT_URL, $url);
 		if($https === true) curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
-//		curl_setopt($ch, CURLOPT_COOKIE, $this->_cookie);
-		curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-type: application/x-www-form-urlencoded; charset=UTF-8', 'Authorization: GoogleLogin auth=' . $this->_auth));
+		curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-type: application/x-www-form-urlencoded; charset=UTF-8'));
 
 		ob_start();
         

@@ -9,5 +9,3 @@ Changelog:
 - Added extra functions
 - list functions now return an array instead of HTML
 
-Username / Password authentication
-
