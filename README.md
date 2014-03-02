@@ -1,4 +1,5 @@
-#gReader Library (Original: https://github.com/ericmann/gReader-Library)
+#gReader Library
+Original: https://github.com/ericmann/gReader-Library
 
 PHP class library for providing access to the RSS services compatible with Google Reader API.
 Enables authentication and provides public methods for general Google Reader actions.
